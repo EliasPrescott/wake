@@ -1,6 +1,10 @@
-use std::{thread, process::{Command, Stdio}, io::{Read, stdout, Write, stderr}};
+use std::{
+    io::{stderr, stdout},
+    process::{Command, Stdio},
+    thread,
+};
 
-use crate::{colors::{DEV_COLOR_LIST, get_primary_color}, wrapped_reader::WrapperReader};
+use crate::{colors::get_primary_color, wrapped_reader::WrapperReader};
 
 pub fn run_commands(commands: Vec<(String, String)>) {
     let threads: Vec<_> = commands
@@ -10,10 +14,7 @@ pub fn run_commands(commands: Vec<(String, String)>) {
             let (std_out_color, std_err_color) = (get_primary_color(thread_index), 1);
             println!(
                 "\x1b[38;5;{}m{} -> {} -> Success\x1b[0m|\x1b[38;5;{}mError\x1b[0m",
-                std_out_color,
-                directory,
-                command,
-                std_err_color,
+                std_out_color, directory, command, std_err_color,
             );
 
             thread::spawn(move || {
@@ -40,31 +41,17 @@ pub fn run_commands(commands: Vec<(String, String)>) {
                     "\x1b[0m",
                 );
 
-                let mut buf = vec![0; 8000];
-
-                loop {
-                    let out_read = stdout_reader.read(&mut buf).unwrap();
-                    if out_read > 0 {
-                        let mut std_out = stdout().lock();
-                        std_out.write(&mut buf).unwrap();
-                        buf = vec![0; 8_000];
-                    }
-
-                    let err_read = stderr_reader.read(&mut buf).unwrap();
-                    if err_read > 0 {
-                        let mut std_err = stderr().lock();
-                        std_err.write(&mut buf).unwrap();
-                        buf = vec![0; 8_000];
-                    }
-
-                    if out_read == 0 && err_read == 0 {
-                        break;
-                    }
-                }
+                // std::io::copy seems to perform better, especially with long-running-test.sh,
+                // but it may have a higher chance of collisions because it is not strictly locking
+                // stdout or stderr when it writes.
+                // Also I am concerned that copy() is a strictly blocking call, which might mean that
+                // the stderr copies will be delayed until stdout is finished
+                std::io::copy(&mut stdout_reader, &mut stdout()).unwrap();
+                std::io::copy(&mut stderr_reader, &mut stderr()).unwrap();
             })
         })
         .collect();
-    
+
     for thread in threads {
         thread.join().unwrap();
     }
