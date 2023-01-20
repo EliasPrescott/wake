@@ -1,0 +1,4 @@
+./ -> ls
+./src -> ls
+./target -> ls
+./ -> bash long-running-test.sh

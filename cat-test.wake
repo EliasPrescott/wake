@@ -1,0 +1,4 @@
+./src -> cat colors.rs
+./src -> cat main.rs
+./src -> cat run_commands.rs
+./src -> cat wrapped_reader.rs
