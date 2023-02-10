@@ -6,7 +6,8 @@ mod colors;
 mod run_commands;
 mod wrapped_reader;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = args().collect();
 
     let command_file_path = match &args[..] {
@@ -17,7 +18,7 @@ fn main() {
         _ => panic!("Unhandled number of command-line arguments"),
     };
 
-    run_commands(load_commands_from_file(command_file_path))
+    run_commands(load_commands_from_file(command_file_path)).await;
 }
 
 fn load_commands_from_file(path: &str) -> Vec<(String, String)> {
