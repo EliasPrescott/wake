@@ -1,36 +1,37 @@
-use std::env::args;
+use clap::Parser;
 
+use load_commands::load_commands_from_file;
 use run_commands::run_commands;
 
 mod colors;
+mod load_commands;
 mod run_commands;
 mod wrapped_reader;
 
-#[tokio::main]
-async fn main() {
-    let args: Vec<String> = args().collect();
+/// A simple command-line tool for waking up your complex projects and workflows
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = Some(
+    "A simple command-line tool for waking up your complex projects and workflows.
+Use .wake files to specify directories and commands to start as child processes.
 
-    let command_file_path = match &args[..] {
-        // Look for a .wake file in the current directory if there are no command-line args
-        [_] => ".wake",
-        // If there is one command-line arg, use it as a path to the command file to run
-        [_, path] => path,
-        _ => panic!("Unhandled number of command-line arguments"),
-    };
+Example .wake file:
+    ./api -> dotnet run
+    ./front-end -> npm run
+    ./logger -> docker compose up"
+))]
+struct Args {
+    /// Path to .wake file
+    #[arg(default_value = ".wake")]
+    path: String,
 
-    run_commands(load_commands_from_file(command_file_path)).await;
+    /// Include info headers
+    #[arg(short, long, default_value_t = false)]
+    info: bool,
 }
 
-fn load_commands_from_file(path: &str) -> Vec<(String, String)> {
-    std::fs::read_to_string(path)
-        .unwrap()
-        .lines()
-        .map(|line| {
-            if let Some((directory, raw_command)) = line.split_once("->") {
-                (directory.trim().to_owned(), raw_command.trim().to_owned())
-            } else {
-                panic!("Could not parse command entry from file: {}", line);
-            }
-        })
-        .collect()
+#[tokio::main]
+async fn main() {
+    let args = Args::parse();
+
+    run_commands(load_commands_from_file(&args.path), args.info).await;
 }
