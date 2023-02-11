@@ -37,6 +37,9 @@ where
             .poll_read(cx, &mut tokio::io::ReadBuf::new(temp_buf));
         match async_read_result {
             Poll::Ready(Ok(())) => {
+                if *temp_buf.first().unwrap() == 0 {
+                    return Poll::Pending;
+                }
                 let mut out = self.start_wrapper.clone();
                 out.append(temp_buf);
                 out.append(&mut self.end_wrapper.clone());

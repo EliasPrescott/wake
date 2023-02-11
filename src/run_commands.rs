@@ -4,14 +4,15 @@ use tokio::process::Command;
 
 use crate::{colors::get_primary_color, wrapped_reader::WrapperReader};
 
-pub async fn run_commands(commands: Vec<(String, String)>) {
-    commands.iter()
+pub async fn run_commands(commands: Vec<(String, String)>, include_info_headers: bool) {
+    commands
+        .iter()
         .enumerate()
         .for_each(|(task_index, (directory, command))| {
-            let (std_out_color, std_err_color) = (get_primary_color(task_index), 1);
+            let (std_out_color, _) = (get_primary_color(task_index), 1);
             println!(
-                "Waking \x1b[38;5;{}m{} -> {} -> Success\x1b[0m|\x1b[38;5;{}mError\x1b[0m",
-                std_out_color, directory, command, std_err_color,
+                "\x1b[38;5;{}mWaking [{} -> {}]\x1b[0m",
+                std_out_color, directory, command,
             );
         });
     println!();
@@ -23,9 +24,9 @@ pub async fn run_commands(commands: Vec<(String, String)>) {
             let (std_out_color, std_err_color) = (get_primary_color(thread_index), 1);
 
             let mut child = Command::new("sh")
-                .current_dir(directory)
+                .current_dir(directory.clone())
                 .arg("-c")
-                .arg(command)
+                .arg(command.clone())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn()
@@ -36,12 +37,28 @@ pub async fn run_commands(commands: Vec<(String, String)>) {
 
             let mut stdout_reader = WrapperReader::new(
                 child_std_out,
-                &format!("\x1b[38;5;{}m", std_out_color),
+                if include_info_headers {
+                    format!(
+                        "\x1b[38;5;{}m[{} -> {}]\n",
+                        std_out_color, directory, command
+                    )
+                } else {
+                    format!("\x1b[38;5;{}m", std_out_color)
+                }
+                .as_str(),
                 "\x1b[0m",
             );
             let mut stderr_reader = WrapperReader::new(
                 child_std_err,
-                &format!("\x1b[38;5;{}m", std_err_color),
+                if include_info_headers {
+                    format!(
+                        "\x1b[38;5;{}m[{} -> {}]\n",
+                        std_err_color, directory, command
+                    )
+                } else {
+                    format!("\x1b[38;5;{}m", std_err_color)
+                }
+                .as_str(),
                 "\x1b[0m",
             );
 
@@ -55,13 +72,11 @@ pub async fn run_commands(commands: Vec<(String, String)>) {
             });
 
             tokio::task::spawn(async move {
-                tokio::io::copy(&mut stdout_reader, &mut tokio::io::stdout())
-                    .await
+                tokio::io::copy(&mut stdout_reader, &mut tokio::io::stdout()).await
             });
 
             tokio::task::spawn(async move {
-                tokio::io::copy(&mut stderr_reader, &mut tokio::io::stderr())
-                    .await
+                tokio::io::copy(&mut stderr_reader, &mut tokio::io::stderr()).await
             });
 
             child_poll_task
