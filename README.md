@@ -16,5 +16,4 @@ The stdout and stderr of any child processes are asynchronously color-coded and 
 
 The base functionality is already implemented, but future goals include:
  - Aliases for commands
- - Clearer output tagging in the primary process output
  - Optional command output redirection to files
