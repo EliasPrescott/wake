@@ -1,4 +1,4 @@
-./src -> cat colors.rs
-./src -> cat main.rs
-./src -> cat run_commands.rs
+Print Colors: ./src -> cat colors.rs
+Print-Main: ./src -> cat main.rs
+cat run_commands: ./src -> cat run_commands.rs
 ./src -> cat wrapped_reader.rs
