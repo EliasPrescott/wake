@@ -30,18 +30,18 @@ where
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
-        let temp_buf = &mut vec![0; 8_000];
+        let mut temp_buf = vec![0; 8_000];
         let async_read_result = self
             .child_reader
             .as_mut()
-            .poll_read(cx, &mut tokio::io::ReadBuf::new(temp_buf));
+            .poll_read(cx, &mut tokio::io::ReadBuf::new(&mut temp_buf));
         match async_read_result {
             Poll::Ready(Ok(())) => {
                 if *temp_buf.first().unwrap() == 0 {
-                    return Poll::Pending;
+                    return Poll::Ready(Ok(()));
                 }
                 let mut out = self.start_wrapper.clone();
-                out.append(temp_buf);
+                out.append(&mut temp_buf.into_iter().take_while(|x| *x != 0).collect());
                 out.append(&mut self.end_wrapper.clone());
                 let mut out_reader = tokio::io::BufReader::new(out.as_ref());
                 let p = Pin::new(&mut out_reader);
