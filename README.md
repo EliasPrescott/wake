@@ -1,6 +1,6 @@
 # Wake ⏰
 
-A simple (and WIP) command-line tool for waking up your complex projects and workflows.
+A simple command-line tool for waking up complex projects and workflows.
 
 Using `.wake` files, you specify a list of directories and commands to start as child processes.
 
@@ -13,7 +13,3 @@ Here is an example `.wake` file:
 ```
 
 The stdout and stderr of any child processes are asynchronously color-coded and streamed to your primary process.
-
-The base functionality is already implemented, but future goals include:
- - Aliases for commands
- - Optional command output redirection to files
